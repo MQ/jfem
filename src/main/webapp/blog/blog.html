@@ -1,0 +1,198 @@
+<base href="${baseUrl!}/"/> 
+<script type="text/javascript" src="static/jquery-easyui-1.3.6/jquery.min.js" charset="utf-8"></script>
+<link id="easyuiTheme" rel="stylesheet" href="static/jquery-easyui-1.3.6/themes/default/easyui.css" type="text/css"></link>
+<link rel="stylesheet" href="static/jquery-easyui-1.3.6/themes/icon.css" type="text/css"></link>
+<script type="text/javascript" src="static/jquery-easyui-1.3.6/jquery.easyui.min.js" charset="utf-8"></script>
+<script type="text/javascript" src="static/jquery-easyui-1.3.6/locale/easyui-lang-zh_CN.js" charset="utf-8"></script>
+<script type="text/javascript" src="static/js/jquery.cookie.js" charset="utf-8"></script>
+<link rel="stylesheet" href="static/css/iconCls.css" type="text/css"></link>
+<script type="text/javascript" src="static/js/zj_jsExt.js" charset="utf-8"></script>
+<script type="text/javascript" src="static/js/zj_jqueryExt.js" charset="utf-8"></script>
+<script type="text/javascript">
+	$(function() {
+		 $('#blog_datagrid').datagrid({
+			url : '/blog/datagrid',
+			fit : true,
+			fitColumns : true,
+			border : false,
+			pagination : true,
+			idField : 'id',
+			pageSize : 50,
+			pageList : [ 50, 100 ],
+			sortName : 'id',
+			sortOrder : 'desc',
+			checkOnSelect : false,
+			selectOnCheck : false,
+			nowrap : false,
+			frozenColumns : [ [ {
+				title : '编号',
+				field : 'id',
+				width : 150,
+				sortable : true,
+			}, {
+				title : '名称',
+				field : 'title',
+				width : 150,
+				sortable : true
+			} ] ],
+			columns : [ [ {
+				title : 'content',
+				field : 'content',
+				width : 150
+			},{
+				field : 'action',
+				title : '动作',
+				width : 100,
+				formatter : function(value, row, index) {
+					var str='<a href="javascript:;" onclick="blog_edit_fun(\'{0}\');">修改</a>&nbsp;&nbsp;<a href="javascript:;" onclick="blog_dels_fun(\'{1}\');">删除</a>';
+					return formatString(str, row.id, row.id);
+				}
+			} ] ],
+			toolbar : '#blog_toolbar'
+		}); 
+	});
+ 	//添加
+	function blog_add_fun(){
+		$('#blog_datagrid').datagrid('uncheckAll').datagrid('unselectAll').datagrid('clearSelections');
+		$('<div/>').dialog({
+			href : '/blog/add',
+			width : 500,
+			height : 350,
+			modal : true,
+			title : '添加图标',
+			buttons : [ {
+				text : '增加',
+				blogCls : 'blog-add',
+				handler : function() {
+					var d = $(this).closest('.window-body');
+					$('#blog_add_form').form({
+						url : '/blog/save',
+						success : function(result) {
+							try {
+								var r = zj.toJson(result);
+								if (r.success) {
+									d.dialog('destroy');
+									$.messager.show({
+										title : '提示',
+										msg : '添加成功'
+									});
+								}
+							} catch (e) {
+								d.dialog('destroy');
+								$.messager.show({
+									title : '提示',
+									msg : '添加成功'
+								});
+							}
+								$('#blog_datagrid').datagrid('reload');
+						}
+					});
+					$('#blog_add_form').submit();
+				}
+			} ],
+			onClose : function() {
+				$(this).dialog('destroy');
+			}
+		});
+	}
+	//编辑
+	function blog_edit_fun(id) {
+		$('#blog_datagrid').datagrid('uncheckAll').datagrid('unselectAll').datagrid('clearSelections');
+		$('<div/>').dialog({
+			href : '/blog/edit?id=' + id,
+			width : 500,
+			height : 350,
+			modal : true,
+			title : '编辑角色',
+			buttons : [ {
+				text : '编辑',
+				blogCls : 'blog-edit',
+				handler : function() {
+					var d = $(this).closest('.window-body');
+					$('#blog_edit_form').form('submit', {
+						url : '/blog/update',
+						success : function(result) {
+							try {
+								var r = $.parseJSON(result);
+								if (r.success) {
+									d.dialog('destroy');
+								$.messager.show({
+									title : '提示',
+									msg : '修改成功'
+								});
+								}
+							} catch (e) {
+								d.dialog('destroy');
+								$.messager.show({
+									title : '提示',
+									msg : ''
+								});
+							}
+								$('#blog_datagrid').datagrid('reload');
+						}
+					});
+				}
+			} ],
+			onClose : function() {
+				$(this).dialog('destroy');
+			},
+			onLoad : function() {
+				var index = $('#blog_datagrid').datagrid('getRowIndex', id);
+				var rows = $('#blog_datagrid').datagrid('getRows');
+				var o = rows[index];
+				$('#blog_edit_form').form('load', o);
+			}
+		});
+	}
+
+	//删除
+	function blog_del_fun() {
+		var rows = $('#blog_datagrid').datagrid('getChecked');
+		var ids = [];
+		if (rows.length > 0) {
+			$.messager.confirm('确认', '您是否要删除当前选中的项目？', function(r) {
+				if (r) {
+					for (var i = 0; i < rows.length; i++) {
+						ids.push(rows[i].id);
+					}
+					$.ajax({
+						url : '${baseUrl!}/blog/delete',
+						data : {
+							ids : ids.join(',')
+						},
+						dataType : 'json',
+						success : function(result) {
+							if (result.success) {
+								$('#blog_datagrid').datagrid('load');
+								$('#blog_datagrid').datagrid('uncheckAll').datagrid('unselectAll').datagrid('clearSelections');
+							}
+							$.messager.show({
+								title : '提示',
+								msg : "删除成功！"
+							});
+						}
+					});
+				}
+			});
+		} else {
+			$.messager.show({
+				title : '提示',
+				msg : '请勾选要删除的记录！'
+			});
+		}
+	}
+	function blog_dels_fun(id) {
+		$('#blog_datagrid').datagrid('uncheckAll').datagrid('unselectAll').datagrid('clearSelections');
+		$('#blog_datagrid').datagrid('checkRow', $('#blog_datagrid').datagrid('getRowIndex', id));
+		blog_del_fun();
+	} 
+</script>
+<table id="blog_datagrid"></table>
+<div id="blog_toolbar" style="display: none;">
+	<a href="javascript:void(0);" onclick="blog_add_fun();" class="easyui-linkbutton" data-options="blogCls:'blog-add',plain:true" style="float: left;">增加</a>
+	<div class="datagrid-btn-separator"></div>
+	<a href="javascript:void(0);" onclick="blog_del_fun();" class="easyui-linkbutton" data-options="blogCls:'blog-remove',plain:true" style="float: left;">批量删除</a>
+	<div class="datagrid-btn-separator"></div>
+	<input id="searchbox" class="easyui-searchbox" style="width:150px;" data-options="searcher:function(value,name){$('#blog_datagrid').datagrid('load',{name:value});},prompt:'可模糊查询名称'"></input>
+	<a href="javascript:void(0);" class="easyui-linkbutton" data-options="blogCls:'blog-cancel',plain:true" onclick="$('#blog_datagrid').datagrid('load',{});$('#searchbox').searchbox('setValue','');">清空条件</a>
+</div>
